@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e74c3c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Evimde İlaç">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Evimde İlaç">
+    <title>Evimde İlaç</title>
+    
+    <!-- PWA Manifest (Base64 encoded) -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRXZpbWRlIMSwbGHEnyIsInNob3J0X25hbWUiOiJFdmltZGVMaWxhYyIsImRlc2NyaXB0aW9uIjoiQWvEsWxsIElsYcOnIFRha2lwIFNpc3RlbWkiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2U3NGMzYyIsInRoZW1lX2NvbG9yIjoiI2U3NGMzYyIsIm9yaWVudGF0aW9uIjoicG9ydHJhaXQifQ==">
+    
+    <style>
+        /* [Önceki CSS kodunun tamamı buraya] */
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+        body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:10px}
+        .app-container{max-width:500px;margin:0 auto;background:white;border-radius:20px;min-height:95vh;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column}
+        .header{background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white;padding:20px;text-align:center;position:relative}
+        .header h1{font-size:1.8em;font-weight:800;margin-bottom:5px}
+        .header p{font-size:0.9em;opacity:0.9}
+        .header-stats{display:flex;justify-content:center;gap:20px;margin-top:15px;font-size:0.85em}
+        .stat{background:rgba(255,255,255,0.2);padding:5px 15px;border-radius:20px}
+        .screen{display:none;flex:1;flex-direction:column;padding:15px;overflow-y:auto}
+        .screen.active{display:flex;animation:fadeIn 0.3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .emergency-banner{background:linear-gradient(135deg,#ff6b6b 0%,#ee5a6f 100%);color:white;padding:15px;border-radius:12px;margin-bottom:20px;text-align:center;cursor:pointer}
+        .emergency-banner:active{transform:scale(0.98)}
+        .emergency-icon{font-size:2em;margin-bottom:5px}
+        .emergency-text{font-weight:700;font-size:1.1em}
+        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:20px}
+        .menu-card{background:white;border-radius:15px;padding:20px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);cursor:pointer;transition:all 0.2s}
+        .menu-card:active{transform:scale(0.95)}
+        .menu-icon{font-size:2.5em;margin-bottom:10px}
+        .menu-title{font-weight:700;color:#333}
+        .btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:1em;font-weight:700;cursor:pointer;margin-top:10px}
+        .btn-primary{background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white}
+        .btn-success{background:linear-gradient(135deg,#27ae60 0%,#229954 100%);color:white}
+        .btn-secondary{background:#e2e8f0;color:#4a5568}
+        .form-group{margin-bottom:15px}
+        .form-label{display:block;font-weight:600;color:#4a5568;margin-bottom:5px;font-size:0.9em}
+        .form-input{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:1em}
+        .form-input:focus{outline:none;border-color:#e74c3c}
+        .category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+        .category-card{padding:15px;border-radius:12px;text-align:center;cursor:pointer;border:3px solid transparent;position:relative}
+        .category-card.selected{border-color:#333;transform:scale(1.05)}
+        .category-icon{font-size:2em;margin-bottom:5px}
+        .cat-agri{background:#e74c3c;color:white}
+        .cat-antibiyotik{background:#9b59b6;color:white}
+        .cat-vitamin{background:#27ae60;color:white}
+        .cat-seker{background:#f39c12;color:white}
+        .cat-kalp{background:#e91e63;color:white}
+        .cat-mide{background:#00bcd4;color:white}
+        .cat-alerji{background:#795548;color:white}
+        .cat-goz{background:#3f51b5;color:white}
+        .cat-cilt{background:#ff9800;color:white}
+        .cat-diger{background:#607d8b;color:white}
+        .location-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+        .location-card{background:#f7fafc;border:2px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;cursor:pointer}
+        .location-card.selected{background:#e74c3c;color:white;border-color:#e74c3c}
+        .photo-section{background:#f7fafc;border-radius:12px;padding:15px;text-align:center;margin-bottom:15px}
+        .photo-preview{width:100%;height:200px;background:#e2e8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;overflow:hidden}
+        .photo-preview img{width:100%;height:100%;object-fit:cover}
+        .photo-buttons{display:flex;gap:10px}
+        .photo-btn{flex:1;padding:12px;border:none;border-radius:8px;background:#e74c3c;color:white;font-weight:600;cursor:pointer}
+        .photo-btn input{display:none}
+        .medicine-list{flex:1;overflow-y:auto}
+        .medicine-card{background:white;border-radius:12px;padding:15px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;gap:12px;align-items:center;cursor:pointer;border-left:5px solid}
+        .medicine-image{width:60px;height:60px;background:#f0f0f0;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .medicine-image img{width:100%;height:100%;object-fit:cover}
+        .medicine-info{flex:1}
+        .medicine-name{font-weight:700;color:#2d3748;margin-bottom:3px}
+        .medicine-expiry{font-size:0.75em;padding:3px 8px;border-radius:8px}
+        .expiry-good{background:#c6f6d5;color:#22543d}
+        .expiry-warning{background:#fefcbf;color:#744210}
+        .expiry-danger{background:#fed7d7;color:#742a2a}
+        .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+        .modal.active{display:flex}
+        .modal-content{background:white;border-radius:20px;padding:25px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .modal-title{font-size:1.3em;font-weight:700}
+        .modal-close{background:none;border:none;font-size:1.5em;color:#a0aec0;cursor:pointer}
+        .notification{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#27ae60;color:white;padding:15px 25px;border-radius:12px;font-weight:700;transition:all 0.3s;z-index:1001}
+        .notification.show{transform:translateX(-50%) translateY(0)}
+        .back-btn{position:absolute;left:15px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);border:none;width:40px;height:40px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2em}
+        .install-banner{position:fixed;bottom:0;left:0;right:0;background:white;padding:15px;box-shadow:0 -5px 20px rgba(0,0,0,0.1);display:none;z-index:1002}
+        .install-banner.show{display:block}
+        .install-content{max-width:500px;margin:0 auto;display:flex;align-items:center;gap:15px}
+        .install-btn{background:#e74c3c;color:white;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <button class="back-btn" id="backBtn" style="display:none" onclick="goBack()">←</button>
+            <h1>🏥 Evimde İlaç</h1>
+            <p>Akıllı İlaç Takip Sistemi</p>
+            <div class="header-stats">
+                <div class="stat" id="totalMedicines">💊 0 İlaç</div>
+                <div class="stat" id="expiryAlert">⚠️ 0 Uyarı</div>
+            </div>
+        </div>
+        
+        <div class="screen active" id="mainScreen">
+            <div class="emergency-banner" onclick="showEmergency()">
+                <div class="emergency-icon">🚨</div>
+                <div class="emergency-text">ACİL DURUM</div>
+                <div style="font-size:0.8em;opacity:0.9">Ambulans / Doktor / Eczane</div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-card" onclick="showAddMedicine()">
+                    <div class="menu-icon">➕</div>
+                    <div class="menu-title">İlaç Ekle</div>
+                </div>
+                <div class="menu-card" onclick="showMedicineList()">
+                    <div class="menu-icon">💊</div>
+                    <div class="menu-title">İlaçlarım</div>
+                </div>
+                <div class="menu-card" onclick="showLocationView()">
+                    <div class="menu-icon">📍</div>
+                    <div class="menu-title">Nerede?</div>
+                </div>
+                <div class="menu-card" onclick="showExpiring()">
+                    <div class="menu-icon">⚠️</div>
+                    <div class="menu-title">SKT Uyarıları</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diğer ekranlar önceki kodla aynı... -->
+        
+        <div class="screen" id="addScreen">
+            <h2 style="margin-bottom:15px;color:#2d3748">Yeni İlaç Ekle</h2>
+            <div class="photo-section">
+                <div class="photo-preview" id="photoPreview">
+                    <div style="color:#a0aec0;font-size:3em">📷</div>
+                </div>
+                <div class="photo-buttons">
+                    <label class="photo-btn">
+                        📷 Kamera
+                        <input type="file" accept="image/*" capture="camera" onchange="handlePhoto(this)">
+                    </label>
+                    <label class="photo-btn" style="background:#27ae60">
+                        🖼️ Galeri
+                        <input type="file" accept="image/*" onchange="handlePhoto(this)">
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">İlaç Adı *</label>
+                <input type="text" class="form-input" id="medicineName" placeholder="Örn: Augmentin 1000 mg">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Kategori *</label>
+                <div class="category-grid">
+                    <div class="category-card cat-agri" onclick="selectCategory('agri', this)">💊 Ağrı</div>
+                    <div class="category-card cat-antibiyotik" onclick="selectCategory('antibiyotik', this)">🦠 Antibiyotik</div>
+                    <div class="category-card cat-vitamin" onclick="selectCategory('vitamin', this)">🍊 Vitamin</div>
+                    <div class="category-card cat-seker" onclick="selectCategory('seker', this)">🩸 Şeker</div>
+                    <div class="category-card cat-kalp" onclick="selectCategory('kalp', this)">❤️ Kalp</div>
+                    <div class="category-card cat-mide" onclick="selectCategory('mide', this)">🤢 Mide</div>
+                    <div class="category-card cat-alerji" onclick="selectCategory('alerji', this)">🤧 Alerji</div>
+                    <div class="category-card cat-goz" onclick="selectCategory('goz', this)">👁️ Göz</div>
+                    <div class="category-card cat-cilt" onclick="selectCategory('cilt', this)">🧴 Cilt</div>
+                    <div class="category-card cat-diger" onclick="selectCategory('diger', this)">💉 Diğer</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Son Kullanma Tarihi *</label>
+                <input type="date" class="form-input" id="expiryDate">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Konum *</label>
+                <div class="location-grid">
+                    <div class="location-card" onclick="selectLocation('banyo', this)">🚿 Banyo</div>
+                    <div class="location-card" onclick="selectLocation('mutfak', this)">🍳 Mutfak</div>
+                    <div class="location-card" onclick="selectLocation('yatak', this)">🛏️ Yatak</div>
+                    <div class="location-card" onclick="selectLocation('saglik', this)">🩺 Çanta</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-success" onclick="saveMedicine()">💾 Kaydet</button>
+            <button class="btn btn-secondary" onclick="goBack()">İptal</button>
+        </div>
+        
+        <!-- Listeleme ekranları... -->
+        
+    </div>
+    
+    <!-- PWA Install Banner -->
+    <div class="install-banner" id="installBanner">
+        <div class="install-content">
+            <div style="font-size:2em">💊</div>
+            <div style="flex:1">
+                <div style="font-weight:700">Evimde İlaç</div>
+                <div style="font-size:0.85em;color:#718096">Ana ekrana ekle, offline kullan</div>
+            </div>
+            <button class="install-btn" id="installBtn">Ekle</button>
+            <button style="background:none;border:none;font-size:1.5em;color:#a0aec0" onclick="closeInstall()">×</button>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+            `)).then(() => console.log('SW registered'));
+        }
+        
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBanner').classList.add('show');
+        });
+        
+        document.getElementById('installBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+                document.getElementById('installBanner').classList.remove('show');
+            }
+        });
+        
+        function closeInstall() {
+            document.getElementById('installBanner').classList.remove('show');
+        }
+        
+        // Uygulama kodları...
+        let medicines = JSON.parse(localStorage.getItem('evimdeIlac')) || [];
+        let currentMedicine = {};
+        
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('backBtn').style.display = id === 'mainScreen' ? 'none' : 'flex';
+        }
+        
+        function goBack() { showScreen('mainScreen'); }
+        function showAddMedicine() { showScreen('addScreen'); currentMedicine = {}; }
+        function showMedicineList() { showScreen('listScreen'); }
+        function showLocationView() { showScreen('locationScreen'); }
+        function showExpiring() { showScreen('expiryScreen'); }
+        
+        function selectCategory(cat, el) {
+            currentMedicine.category = cat;
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+        
+        function selectLocation(loc, el) {
+            currentMedicine.location = loc;
+            document.querySelectorAll('.location-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+        
+        function handlePhoto(input) {
+            if(input.files?.[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    currentMedicine.photo = e.target.result;
+                    document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        function saveMedicine() {
+            const name = document.getElementById('medicineName').value.trim();
+            const expiry = document.getElementById('expiryDate').value;
+            
+            if(!name || !currentMedicine.category || !expiry || !currentMedicine.location) {
+                showNotification('Tüm zorunlu alanları doldurun!', 'error');
+                return;
+            }
+            
+            medicines.push({
+                id: Date.now(),
+                name, 
+                expiry,
+                category: currentMedicine.category,
+                location: currentMedicine.location,
+                photo: currentMedicine.photo,
+                added: new Date().toLocaleDateString('tr-TR')
+            });
+            
+            localStorage.setItem('evimdeIlac', JSON.stringify(medicines));
+            showNotification('Kaydedildi! ✅');
+            goBack();
+        }
+        
+        function showNotification(msg, type='success') {
+            const n = document.getElementById('notification');
+            n.textContent = msg;
+            n.className = 'notification show ' + (type === 'error' ? 'error' : '');
+            setTimeout(() => n.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
