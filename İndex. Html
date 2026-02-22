@@ -1,0 +1,984 @@
+
+# İlaç Takip Uygulaması - Tek Dosya
+html_content = '''<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e74c3c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Evimde İlaç</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+        body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:10px}
+        .app-container{max-width:500px;margin:0 auto;background:white;border-radius:20px;min-height:95vh;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column}
+        
+        /* Header */
+        .header{background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white;padding:20px;text-align:center;position:relative}
+        .header h1{font-size:1.8em;font-weight:800;margin-bottom:5px}
+        .header p{font-size:0.9em;opacity:0.9}
+        .header-stats{display:flex;justify-content:center;gap:20px;margin-top:15px;font-size:0.85em}
+        .stat{background:rgba(255,255,255,0.2);padding:5px 15px;border-radius:20px}
+        
+        /* Ekranlar */
+        .screen{display:none;flex:1;flex-direction:column;padding:15px;overflow-y:auto}
+        .screen.active{display:flex;animation:fadeIn 0.3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        
+        /* Ana Menü */
+        .emergency-banner{background:linear-gradient(135deg,#ff6b6b 0%,#ee5a6f 100%);color:white;padding:15px;border-radius:12px;margin-bottom:20px;text-align:center;cursor:pointer;transition:all 0.2s}
+        .emergency-banner:active{transform:scale(0.98)}
+        .emergency-icon{font-size:2em;margin-bottom:5px}
+        .emergency-text{font-weight:700;font-size:1.1em}
+        .emergency-sub{font-size:0.8em;opacity:0.9;margin-top:3px}
+        
+        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:20px}
+        .menu-card{background:white;border-radius:15px;padding:20px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.1);cursor:pointer;transition:all 0.2s;border:2px solid transparent}
+        .menu-card:active{transform:scale(0.95)}
+        .menu-icon{font-size:2.5em;margin-bottom:10px}
+        .menu-title{font-weight:700;color:#333}
+        .menu-desc{font-size:0.8em;color:#666;margin-top:5px}
+        
+        /* Butonlar */
+        .btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:1em;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:10px}
+        .btn:active{transform:scale(0.98)}
+        .btn-primary{background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white}
+        .btn-success{background:linear-gradient(135deg,#27ae60 0%,#229954 100%);color:white}
+        .btn-warning{background:linear-gradient(135deg,#f39c12 0%,#e67e22 100%);color:white}
+        .btn-info{background:linear-gradient(135deg,#3498db 0%,#2980b9 100%);color:white}
+        .btn-secondary{background:#e2e8f0;color:#4a5568}
+        
+        /* Form */
+        .form-group{margin-bottom:15px}
+        .form-label{display:block;font-weight:600;color:#4a5568;margin-bottom:5px;font-size:0.9em}
+        .form-input{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:1em;transition:all 0.2s}
+        .form-input:focus{outline:none;border-color:#e74c3c}
+        select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234a5568' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:35px}
+        textarea.form-input{min-height:80px;resize:vertical}
+        
+        /* Kategori Seçimi */
+        .category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+        .category-card{padding:15px;border-radius:12px;text-align:center;cursor:pointer;transition:all 0.2s;border:3px solid transparent;position:relative}
+        .category-card.selected{border-color:#333;transform:scale(1.05)}
+        .category-icon{font-size:2em;margin-bottom:5px}
+        .category-name{font-size:0.85em;font-weight:700}
+        .category-check{position:absolute;top:5px;right:5px;background:white;border-radius:50%;width:20px;height:20px;display:none;align-items:center;justify-content:center;font-size:12px}
+        .category-card.selected .category-check{display:flex}
+        
+        /* Kategori Renkleri */
+        .cat-agri{background:#e74c3c;color:white}
+        .cat-antibiyotik{background:#9b59b6;color:white}
+        .cat-vitamin{background:#27ae60;color:white}
+        .cat-seker{background:#f39c12;color:white}
+        .cat-kalp{background:#e91e63;color:white}
+        .cat-mide{background:#00bcd4;color:white}
+        .cat-alerji{background:#795548;color:white}
+        .cat-goz{background:#3f51b5;color:white}
+        .cat-cilt{background:#ff9800;color:white}
+        .cat-diger{background:#607d8b;color:white}
+        
+        /* Konum Seçici */
+        .location-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+        .location-card{background:#f7fafc;border:2px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:all 0.2s}
+        .location-card.selected{background:#e74c3c;color:white;border-color:#e74c3c}
+        .location-icon{font-size:1.5em;margin-bottom:5px}
+        .location-name{font-size:0.8em;font-weight:600}
+        
+        /* Raf Seçici */
+        .shelf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+        .shelf-btn{padding:10px;border:2px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;font-weight:600;transition:all 0.2s}
+        .shelf-btn.selected{background:#27ae60;color:white;border-color:#27ae60}
+        
+        /* Fotoğraf */
+        .photo-section{background:#f7fafc;border-radius:12px;padding:15px;text-align:center;margin-bottom:15px}
+        .photo-preview{width:100%;height:200px;background:#e2e8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;overflow:hidden;position:relative}
+        .photo-preview img{width:100%;height:100%;object-fit:cover}
+        .photo-placeholder{color:#a0aec0;font-size:3em}
+        .photo-buttons{display:flex;gap:10px}
+        .photo-btn{flex:1;padding:12px;border:none;border-radius:8px;background:#e74c3c;color:white;font-weight:600;cursor:pointer;font-size:0.9em}
+        .photo-btn input[type="file"]{display:none}
+        
+        /* İlaç Listesi */
+        .medicine-list{flex:1;overflow-y:auto}
+        .medicine-card{background:white;border-radius:12px;padding:15px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;gap:12px;align-items:center;cursor:pointer;transition:all 0.2s;border-left:5px solid}
+        .medicine-card:active{transform:scale(0.98)}
+        .medicine-image{width:60px;height:60px;background:#f0f0f0;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+        .medicine-image img{width:100%;height:100%;object-fit:cover}
+        .medicine-image .no-photo{font-size:1.5em;color:#ccc}
+        .medicine-info{flex:1;min-width:0}
+        .medicine-name{font-weight:700;color:#2d3748;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .medicine-meta{font-size:0.8em;color:#718096;display:flex;gap:10px;flex-wrap:wrap}
+        .medicine-location{background:#edf2f7;padding:3px 8px;border-radius:8px;font-size:0.75em;color:#4a5568;display:flex;align-items:center;gap:3px}
+        .medicine-dose{font-weight:700;color:#e74c3c}
+        .medicine-expiry{font-size:0.75em;padding:3px 8px;border-radius:8px;font-weight:600}
+        .expiry-good{background:#c6f6d5;color:#22543d}
+        .expiry-warning{background:#fefcbf;color:#744210}
+        .expiry-danger{background:#fed7d7;color:#742a2a}
+        .medicine-delete{width:36px;height:36px;background:#fed7d7;border:none;border-radius:50%;color:#e53e3e;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2em;flex-shrink:0}
+        
+        /* Arama */
+        .search-box{position:relative;margin-bottom:15px}
+        .search-input{width:100%;padding:15px 15px 15px 45px;border:2px solid #e2e8f0;border-radius:12px;font-size:1em}
+        .search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:1.2em}
+        .search-filters{display:flex;gap:8px;margin-bottom:15px;overflow-x:auto;padding-bottom:5px}
+        .filter-chip{padding:8px 15px;background:#edf2f7;border:none;border-radius:20px;font-size:0.85em;font-weight:600;color:#4a5568;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+        .filter-chip.active{background:#e74c3c;color:white}
+        
+        /* Boş Durum */
+        .empty-state{text-align:center;padding:40px 20px;color:#a0aec0}
+        .empty-icon{font-size:4em;margin-bottom:15px}
+        .empty-text{font-size:1.1em;margin-bottom:20px}
+        
+        /* Modal */
+        .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+        .modal.active{display:flex}
+        .modal-content{background:white;border-radius:20px;padding:25px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto;animation:modalIn 0.3s ease}
+        @keyframes modalIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .modal-title{font-size:1.3em;font-weight:700;color:#2d3748}
+        .modal-close{background:none;border:none;font-size:1.5em;color:#a0aec0;cursor:pointer}
+        .modal-image{width:100%;height:200px;background:#f0f0f0;border-radius:12px;margin-bottom:15px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .modal-image img{width:100%;height:100%;object-fit:cover}
+        .modal-detail{margin-bottom:12px;padding:12px;background:#f7fafc;border-radius:8px}
+        .modal-label{font-size:0.8em;color:#718096;margin-bottom:3px}
+        .modal-value{font-weight:700;color:#2d3748}
+        .modal-alert{background:#fed7d7;color:#742a2a;padding:12px;border-radius:8px;margin-bottom:15px;font-size:0.9em;font-weight:600}
+        
+        /* Acil Durum Modal */
+        .emergency-modal .modal-content{background:linear-gradient(135deg,#ff6b6b 0%,#ee5a6f 100%);color:white}
+        .emergency-modal .modal-title{color:white}
+        .emergency-modal .modal-close{color:white}
+        .emergency-number{font-size:2em;font-weight:800;text-align:center;margin:20px 0;padding:20px;background:rgba(255,255,255,0.2);border-radius:15px}
+        .emergency-btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:1.1em;font-weight:700;margin-bottom:10px;cursor:pointer}
+        
+        /* Alarm Ayarı */
+        .alarm-section{background:#f7fafc;border-radius:12px;padding:15px;margin-bottom:15px}
+        .alarm-title{font-weight:700;color:#4a5568;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+        .alarm-options{display:flex;flex-wrap:wrap;gap:8px}
+        .alarm-chip{padding:8px 12px;background:white;border:2px solid #e2e8f0;border-radius:20px;font-size:0.8em;font-weight:600;cursor:pointer;transition:all 0.2s}
+        .alarm-chip.selected{background:#e74c3c;color:white;border-color:#e74c3c}
+        
+        /* Geri Butonu */
+        .back-btn{position:absolute;left:15px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);border:none;width:40px;height:40px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2em}
+        
+        /* Bildirim */
+        .notification{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#27ae60;color:white;padding:15px 25px;border-radius:12px;font-weight:700;box-shadow:0 5px 20px rgba(0,0,0,0.2);transition:all 0.3s;z-index:1001}
+        .notification.show{transform:translateX(-50%) translateY(0)}
+        .notification.error{background:#e74c3c}
+        .notification.warning{background:#f39c12}
+        
+        /* Doz Sayaç */
+        .dose-counter{display:flex;align-items:center;justify-content:center;gap:15px;margin:15px 0}
+        .dose-btn{width:40px;height:40px;border:none;border-radius:50%;font-size:1.5em;font-weight:700;cursor:pointer;background:#e74c3c;color:white}
+        .dose-display{font-size:1.5em;font-weight:800;color:#2d3748;min-width:60px;text-align:center}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <button class="back-btn" id="backBtn" style="display:none" onclick="goBack()">←</button>
+            <h1>🏥 Evimde İlaç</h1>
+            <p>Akıllı İlaç Takip Sistemi</p>
+            <div class="header-stats">
+                <div class="stat" id="totalMedicines">💊 0 İlaç</div>
+                <div class="stat" id="expiryAlert">⚠️ 0 Uyarı</div>
+            </div>
+        </div>
+        
+        <!-- Ana Menü -->
+        <div class="screen active" id="mainScreen">
+            <!-- Acil Durum Butonu -->
+            <div class="emergency-banner" onclick="showEmergency()">
+                <div class="emergency-icon">🚨</div>
+                <div class="emergency-text">ACİL DURUM</div>
+                <div class="emergency-sub">Ambulans / Doktor / Eczane</div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-card" onclick="showAddMedicine()">
+                    <div class="menu-icon">➕</div>
+                    <div class="menu-title">İlaç Ekle</div>
+                    <div class="menu-desc">Yeni ilaç kaydet</div>
+                </div>
+                <div class="menu-card" onclick="showMedicineList()">
+                    <div class="menu-icon">💊</div>
+                    <div class="menu-title">İlaçlarım</div>
+                    <div class="menu-desc">Tüm ilaçları gör</div>
+                </div>
+                <div class="menu-card" onclick="showLocationView()">
+                    <div class="menu-icon">📍</div>
+                    <div class="menu-title">Nerede?</div>
+                    <div class="menu-desc">Dolap/raf arama</div>
+                </div>
+                <div class="menu-card" onclick="showExpiring()">
+                    <div class="menu-icon">⚠️</div>
+                    <div class="menu-title">SKT Uyarıları</div>
+                    <div class="menu-desc">Bitmeye yakınlar</div>
+                </div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:15px;padding:20px;color:white;margin-top:10px">
+                <h3 style="margin-bottom:10px">💡 İpuçları</h3>
+                <ul style="font-size:0.9em;opacity:0.9;padding-left:20px;line-height:1.6">
+                    <li>İlaç fotoğrafı çekmeyi unutma</li>
+                    <li>Son kullanma tarihini kontrol et</li>
+                    <li>Doz bilgisini doğru gir</li>
+                    <li>Acil durumda hızlı erişim için konum belirt</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- İlaç Ekleme Ekranı -->
+        <div class="screen" id="addScreen">
+            <h2 style="margin-bottom:15px;color:#2d3748">Yeni İlaç Ekle</h2>
+            
+            <!-- Fotoğraf -->
+            <div class="photo-section">
+                <div class="photo-preview" id="photoPreview">
+                    <div class="photo-placeholder">📷</div>
+                </div>
+                <div class="photo-buttons">
+                    <label class="photo-btn">
+                        📷 Kamera
+                        <input type="file" accept="image/*" capture="camera" onchange="handlePhoto(this)">
+                    </label>
+                    <label class="photo-btn" style="background:#27ae60">
+                        🖼️ Galeri
+                        <input type="file" accept="image/*" onchange="handlePhoto(this)">
+                    </label>
+                </div>
+            </div>
+            
+            <!-- İlaç Adı -->
+            <div class="form-group">
+                <label class="form-label">İlaç Adı *</label>
+                <input type="text" class="form-input" id="medicineName" placeholder="Örn: Augmentin 1000 mg">
+            </div>
+            
+            <!-- Etken Madde -->
+            <div class="form-group">
+                <label class="form-label">Etken Madde</label>
+                <input type="text" class="form-input" id="activeIngredient" placeholder="Örn: Amoksisilin">
+            </div>
+            
+            <!-- Kategori -->
+            <div class="form-group">
+                <label class="form-label">Kategori *</label>
+                <div class="category-grid" id="categoryGrid">
+                    <div class="category-card cat-agri" onclick="selectCategory('agri')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">💊</div>
+                        <div class="category-name">Ağrı Kesici</div>
+                    </div>
+                    <div class="category-card cat-antibiyotik" onclick="selectCategory('antibiyotik')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🦠</div>
+                        <div class="category-name">Antibiyotik</div>
+                    </div>
+                    <div class="category-card cat-vitamin" onclick="selectCategory('vitamin')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🍊</div>
+                        <div class="category-name">Vitamin</div>
+                    </div>
+                    <div class="category-card cat-seker" onclick="selectCategory('seker')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🩸</div>
+                        <div class="category-name">Şeker/Tansiyon</div>
+                    </div>
+                    <div class="category-card cat-kalp" onclick="selectCategory('kalp')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">❤️</div>
+                        <div class="category-name">Kalp</div>
+                    </div>
+                    <div class="category-card cat-mide" onclick="selectCategory('mide')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🤢</div>
+                        <div class="category-name">Mide/Bağırsak</div>
+                    </div>
+                    <div class="category-card cat-alerji" onclick="selectCategory('alerji')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🤧</div>
+                        <div class="category-name">Alerji</div>
+                    </div>
+                    <div class="category-card cat-goz" onclick="selectCategory('goz')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">👁️</div>
+                        <div class="category-name">Göz/Kulak</div>
+                    </div>
+                    <div class="category-card cat-cilt" onclick="selectCategory('cilt')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">🧴</div>
+                        <div class="category-name">Cilt/Merhem</div>
+                    </div>
+                    <div class="category-card cat-diger" onclick="selectCategory('diger')">
+                        <div class="category-check">✓</div>
+                        <div class="category-icon">💉</div>
+                        <div class="category-name">Diğer</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Doz Bilgisi -->
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                <div class="form-group">
+                    <label class="form-label">Doz (mg/ml/adet)</label>
+                    <input type="text" class="form-input" id="medicineDose" placeholder="Örn: 500 mg">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kullanım</label>
+                    <select class="form-input" id="usageType">
+                        <option value="tablet">Tablet</option>
+                        <option value="kapsul">Kapsül</option>
+                        <option value="surup">Şurup</option>
+                        <option value="damla">Damla</option>
+                        <option value="merhem">Merhem</option>
+                        <option value="sprey">Sprey</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Günlük Kullanım -->
+            <div class="form-group">
+                <label class="form-label">Günde Kaç Kez?</label>
+                <div class="dose-counter">
+                    <button class="dose-btn" onclick="changeDose(-1)">-</button>
+                    <div class="dose-display" id="dailyDose">3</div>
+                    <button class="dose-btn" onclick="changeDose(1)">+</button>
+                </div>
+            </div>
+            
+            <!-- Son Kullanma Tarihi -->
+            <div class="form-group">
+                <label class="form-label">Son Kullanma Tarihi *</label>
+                <input type="date" class="form-input" id="expiryDate">
+            </div>
+            
+            <!-- Alarm -->
+            <div class="alarm-section">
+                <div class="alarm-title">⏰ Bitiş Uyarısı</div>
+                <div class="alarm-options">
+                    <div class="alarm-chip selected" onclick="selectAlarm(this, 7)">7 gün önce</div>
+                    <div class="alarm-chip" onclick="selectAlarm(this, 15)">15 gün önce</div>
+                    <div class="alarm-chip" onclick="selectAlarm(this, 30)">1 ay önce</div>
+                </div>
+            </div>
+            
+            <!-- Konum -->
+            <div class="form-group">
+                <label class="form-label">Konum * (Nerede?)</label>
+                <div class="location-grid" id="locationGrid">
+                    <div class="location-card" onclick="selectLocation('banyo')">
+                        <div class="location-icon">🚿</div>
+                        <div class="location-name">Banyo Dolabı</div>
+                    </div>
+                    <div class="location-card" onclick="selectLocation('mutfak')">
+                        <div class="location-icon">🍳</div>
+                        <div class="location-name">Mutfak</div>
+                    </div>
+                    <div class="location-card" onclick="selectLocation('yatak')">
+                        <div class="location-icon">🛏️</div>
+                        <div class="location-name">Yatak Odası</div>
+                    </div>
+                    <div class="location-card" onclick="selectLocation('saglik')">
+                        <div class="location-icon">🩺</div>
+                        <div class="location-name">Sağlık Çantası</div>
+                    </div>
+                </div>
+                
+                <div id="shelfSection" style="display:none;margin-top:10px">
+                    <label class="form-label">Raf/Çekmece No</label>
+                    <div class="shelf-grid" id="shelfGrid">
+                        <button class="shelf-btn" onclick="selectShelf(1)">1</button>
+                        <button class="shelf-btn" onclick="selectShelf(2)">2</button>
+                        <button class="shelf-btn" onclick="selectShelf(3)">3</button>
+                        <button class="shelf-btn" onclick="selectShelf(4)">4</button>
+                        <button class="shelf-btn" onclick="selectShelf(5)">5</button>
+                        <button class="shelf-btn" onclick="selectShelf(6)">6</button>
+                        <button class="shelf-btn" onclick="selectShelf(7)">7</button>
+                        <button class="shelf-btn" onclick="selectShelf(8)">8</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notlar -->
+            <div class="form-group">
+                <label class="form-label">Doktor Notu / Yan Etkiler</label>
+                <textarea class="form-input" id="medicineNotes" placeholder="Doktorun önerisi, yan etkiler, vb."></textarea>
+            </div>
+            
+            <button class="btn btn-success" onclick="saveMedicine()">💾 İlacı Kaydet</button>
+            <button class="btn btn-secondary" onclick="goBack()">İptal</button>
+        </div>
+        
+        <!-- İlaç Listesi -->
+        <div class="screen" id="listScreen">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="İlaç adı veya etken madde ara..." oninput="searchMedicines()">
+            </div>
+            
+            <div class="search-filters">
+                <button class="filter-chip active" onclick="filterMedicines('all')">Tümü</button>
+                <button class="filter-chip" onclick="filterMedicines('agri')">💊 Ağrı</button>
+                <button class="filter-chip" onclick="filterMedicines('antibiyotik')">🦠 Antibiyotik</button>
+                <button class="filter-chip" onclick="filterMedicines('vitamin')">🍊 Vitamin</button>
+                <button class="filter-chip" onclick="filterMedicines('seker')">🩸 Şeker</button>
+            </div>
+            
+            <div class="medicine-list" id="medicineList"></div>
+        </div>
+        
+        <!-- Konuma Göre Görünüm -->
+        <div class="screen" id="locationScreen">
+            <h3 style="margin-bottom:15px;color:#2d3748">📍 Nerede?</h3>
+            <div class="location-grid" style="margin-bottom:20px">
+                <div class="location-card" onclick="showLocationMedicines('banyo')">
+                    <div class="location-icon">🚿</div>
+                    <div class="location-name">Banyo Dolabı</div>
+                </div>
+                <div class="location-card" onclick="showLocationMedicines('mutfak')">
+                    <div class="location-icon">🍳</div>
+                    <div class="location-name">Mutfak</div>
+                </div>
+                <div class="location-card" onclick="showLocationMedicines('yatak')">
+                    <div class="location-icon">🛏️</div>
+                    <div class="location-name">Yatak Odası</div>
+                </div>
+                <div class="location-card" onclick="showLocationMedicines('saglik')">
+                    <div class="location-icon">🩺</div>
+                    <div class="location-name">Sağlık Çantası</div>
+                </div>
+            </div>
+            <div id="locationMedicineList"></div>
+        </div>
+        
+        <!-- SKT Uyarıları -->
+        <div class="screen" id="expiryScreen">
+            <h3 style="margin-bottom:15px;color:#2d3748">⚠️ Son Kullanma Tarihi Uyarıları</h3>
+            <div id="expiryList"></div>
+        </div>
+    </div>
+    
+    <!-- İlaç Detay Modal -->
+    <div class="modal" id="medicineModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalMedicineName">İlaç Adı</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalAlert" class="modal-alert" style="display:none"></div>
+            <div class="modal-image" id="modalImage">
+                <div style="color:#ccc;font-size:3em">📷</div>
+            </div>
+            <div class="modal-detail">
+                <div class="modal-label">Etken Madde</div>
+                <div class="modal-value" id="modalIngredient">-</div>
+            </div>
+            <div class="modal-detail">
+                <div class="modal-label">Kategori</div>
+                <div class="modal-value" id="modalCategory">-</div>
+            </div>
+            <div class="modal-detail">
+                <div class="modal-label">Doz & Kullanım</div>
+                <div class="modal-value" id="modalDose">-</div>
+            </div>
+            <div class="modal-detail">
+                <div class="modal-label">Konum</div>
+                <div class="modal-value" id="modalLocation">-</div>
+            </div>
+            <div class="modal-detail">
+                <div class="modal-label">Son Kullanma</div>
+                <div class="modal-value" id="modalExpiry">-</div>
+            </div>
+            <div class="modal-detail" id="modalNotesSection" style="display:none">
+                <div class="modal-label">Notlar</div>
+                <div class="modal-value" id="modalNotes" style="font-weight:400;white-space:pre-wrap"></div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteCurrentMedicine()">🗑️ İlacı Sil</button>
+        </div>
+    </div>
+    
+    <!-- Acil Durum Modal -->
+    <div class="modal emergency-modal" id="emergencyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">🚨 Acil Durum</div>
+                <button class="modal-close" onclick="closeEmergencyModal()">×</button>
+            </div>
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="font-size:4em;margin-bottom:10px">🚑</div>
+                <p style="opacity:0.9">Acil durumda hemen ara:</p>
+            </div>
+            <a href="tel:112" class="emergency-btn" style="background:#27ae60;color:white;text-decoration:none;display:block;text-align:center">🚑 112 - Ambulans</a>
+            <a href="tel:184" class="emergency-btn" style="background:#3498db;color:white;text-decoration:none;display:block;text-align:center">👨‍⚕️ 184 - Alo Doktor</a>
+            <a href="tel:191" class="emergency-btn" style="background:#9b59b6;color:white;text-decoration:none;display:block;text-align:center">💊 191 - Alo Eczane</a>
+            <button class="emergency-btn" style="background:rgba(255,255,255,0.2);color:white" onclick="closeEmergencyModal()">Kapat</button>
+        </div>
+    </div>
+    
+    <!-- Bildirim -->
+    <div class="notification" id="notification">Bildirim</div>
+
+    <script>
+        // Veri yönetimi
+        let medicines = JSON.parse(localStorage.getItem('evimdeIlac')) || [];
+        let currentMedicine = {photo:null,category:null,location:null,shelf:null,alarmDays:7};
+        let currentFilter = 'all';
+        let selectedMedicineId = null;
+        
+        const categories = {
+            agri:{name:'Ağrı Kesici',color:'#e74c3c',icon:'💊'},
+            antibiyotik:{name:'Antibiyotik',color:'#9b59b6',icon:'🦠'},
+            vitamin:{name:'Vitamin',color:'#27ae60',icon:'🍊'},
+            seker:{name:'Şeker/Tansiyon',color:'#f39c12',icon:'🩸'},
+            kalp:{name:'Kalp',color:'#e91e63',icon:'❤️'},
+            mide:{name:'Mide/Bağırsak',color:'#00bcd4',icon:'🤢'},
+            alerji:{name:'Alerji',color:'#795548',icon:'🤧'},
+            goz:{name:'Göz/Kulak',color:'#3f51b5',icon:'👁️'},
+            cilt:{name:'Cilt/Merhem',color:'#ff9800',icon:'🧴'},
+            diger:{name:'Diğer',color:'#607d8b',icon:'💉'}
+        };
+        
+        const locations = {
+            banyo:{name:'Banyo Dolabı',icon:'🚿'},
+            mutfak:{name:'Mutfak',icon:'🍳'},
+            yatak:{name:'Yatak Odası',icon:'🛏️'},
+            saglik:{name:'Sağlık Çantası',icon:'🩺'}
+        };
+        
+        // Ekran yönetimi
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            document.getElementById('backBtn').style.display = screenId === 'mainScreen' ? 'none' : 'flex';
+            updateStats();
+        }
+        
+        function goBack() {
+            showScreen('mainScreen');
+            resetForm();
+        }
+        
+        // Ana menü fonksiyonları
+        function showAddMedicine() {
+            showScreen('addScreen');
+            resetForm();
+        }
+        
+        function showMedicineList() {
+            showScreen('listScreen');
+            renderMedicineList();
+        }
+        
+        function showLocationView() {
+            showScreen('locationScreen');
+        }
+        
+        function showExpiring() {
+            showScreen('expiryScreen');
+            renderExpiryList();
+        }
+        
+        function showEmergency() {
+            document.getElementById('emergencyModal').classList.add('active');
+        }
+        
+        function closeEmergencyModal() {
+            document.getElementById('emergencyModal').classList.remove('active');
+        }
+        
+        // Form işlemleri
+        function resetForm() {
+            currentMedicine = {photo:null,category:null,location:null,shelf:null,alarmDays:7};
+            document.getElementById('medicineName').value = '';
+            document.getElementById('activeIngredient').value = '';
+            document.getElementById('medicineDose').value = '';
+            document.getElementById('usageType').value = 'tablet';
+            document.getElementById('dailyDose').textContent = '3';
+            document.getElementById('expiryDate').value = '';
+            document.getElementById('medicineNotes').value = '';
+            document.getElementById('photoPreview').innerHTML = '<div class="photo-placeholder">📷</div>';
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.location-card').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.shelf-btn').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.alarm-chip').forEach((c,i) => c.classList.toggle('selected', i===0));
+            document.getElementById('shelfSection').style.display = 'none';
+        }
+        
+        function handlePhoto(input) {
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentMedicine.photo = e.target.result;
+                    document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        function selectCategory(cat) {
+            currentMedicine.category = cat;
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+        
+        function selectLocation(loc) {
+            currentMedicine.location = loc;
+            document.querySelectorAll('#locationGrid .location-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            document.getElementById('shelfSection').style.display = 'block';
+        }
+        
+        function selectShelf(num) {
+            currentMedicine.shelf = num;
+            document.querySelectorAll('.shelf-btn').forEach(c => c.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+        
+        function changeDose(change) {
+            const display = document.getElementById('dailyDose');
+            let current = parseInt(display.textContent);
+            current += change;
+            if(current < 1) current = 1;
+            if(current > 10) current = 10;
+            display.textContent = current;
+        }
+        
+        function selectAlarm(element, days) {
+            currentMedicine.alarmDays = days;
+            document.querySelectorAll('.alarm-chip').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+        
+        function saveMedicine() {
+            const name = document.getElementById('medicineName').value.trim();
+            const ingredient = document.getElementById('activeIngredient').value.trim();
+            const dose = document.getElementById('medicineDose').value.trim();
+            const usageType = document.getElementById('usageType').value;
+            const dailyDose = document.getElementById('dailyDose').textContent;
+            const expiry = document.getElementById('expiryDate').value;
+            const notes = document.getElementById('medicineNotes').value.trim();
+            
+            if(!name) { showNotification('İlaç adı girmelisiniz!', 'error'); return; }
+            if(!currentMedicine.category) { showNotification('Kategori seçmelisiniz!', 'error'); return; }
+            if(!expiry) { showNotification('Son kullanma tarihi girmelisiniz!', 'error'); return; }
+            if(!currentMedicine.location) { showNotification('Konum seçmelisiniz!', 'error'); return; }
+            
+            const medicine = {
+                id: Date.now(),
+                name: name,
+                ingredient: ingredient,
+                category: currentMedicine.category,
+                dose: dose,
+                usageType: usageType,
+                dailyDose: dailyDose,
+                expiry: expiry,
+                alarmDays: currentMedicine.alarmDays,
+                location: currentMedicine.location,
+                shelf: currentMedicine.shelf,
+                notes: notes,
+                photo: currentMedicine.photo,
+                added: new Date().toLocaleDateString('tr-TR')
+            };
+            
+            medicines.push(medicine);
+            localStorage.setItem('evimdeIlac', JSON.stringify(medicines));
+            
+            showNotification('İlaç başarıyla kaydedildi! ✅');
+            goBack();
+        }
+        
+        // İlaç listesi
+        function renderMedicineList(filter = 'all', search = '') {
+            const list = document.getElementById('medicineList');
+            list.innerHTML = '';
+            
+            let filtered = medicines;
+            if(filter !== 'all') filtered = filtered.filter(m => m.category === filter);
+            if(search) filtered = filtered.filter(m => 
+                m.name.toLowerCase().includes(search.toLowerCase()) || 
+                (m.ingredient && m.ingredient.toLowerCase().includes(search.toLowerCase()))
+            );
+            
+            if(filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">💊</div>
+                        <div class="empty-text">Henüz ilaç eklenmemiş</div>
+                        <button class="btn btn-primary" onclick="showAddMedicine()">İlaç Ekle</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            filtered.forEach(medicine => {
+                const cat = categories[medicine.category];
+                const loc = locations[medicine.location];
+                const expiryClass = getExpiryClass(medicine.expiry, medicine.alarmDays);
+                const expiryText = formatDate(medicine.expiry);
+                
+                const card = document.createElement('div');
+                card.className = 'medicine-card';
+                card.style.borderLeftColor = cat.color;
+                card.onclick = () => showMedicineDetail(medicine.id);
+                card.innerHTML = `
+                    <div class="medicine-image">
+                        ${medicine.photo ? `<img src="${medicine.photo}">` : '<div class="no-photo">💊</div>'}
+                    </div>
+                    <div class="medicine-info">
+                        <div class="medicine-name">${cat.icon} ${medicine.name}</div>
+                        <div class="medicine-meta">
+                            <span class="medicine-dose">${medicine.dose || 'Doz belirtilmemiş'}</span>
+                            <span class="medicine-location">📍 ${loc.name}${medicine.shelf ? ' - Raf ' + medicine.shelf : ''}</span>
+                        </div>
+                        <div class="medicine-expiry ${expiryClass}">📅 ${expiryText}</div>
+                    </div>
+                    <button class="medicine-delete" onclick="event.stopPropagation(); deleteMedicine(${medicine.id})">🗑️</button>
+                `;
+                list.appendChild(card);
+            });
+        }
+        
+        function searchMedicines() {
+            const search = document.getElementById('searchInput').value;
+            renderMedicineList(currentFilter, search);
+        }
+        
+        function filterMedicines(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            renderMedicineList(cat, document.getElementById('searchInput').value);
+        }
+        
+        // Konum görünümü
+        function showLocationMedicines(loc) {
+            const locMedicines = medicines.filter(m => m.location === loc);
+            const container = document.getElementById('locationMedicineList');
+            const locInfo = locations[loc];
+            
+            if(locMedicines.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-text">${locInfo.name} boş</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Raflara göre grupla
+            const shelves = {};
+            locMedicines.forEach(m => {
+                const shelf = m.shelf || 'Belirtilmemiş';
+                if(!shelves[shelf]) shelves[shelf] = [];
+                shelves[shelf].push(m);
+            });
+            
+            let html = `<h4 style="margin-bottom:15px;color:#4a5568">${locInfo.icon} ${locInfo.name} - ${locMedicines.length} ilaç</h4>`;
+            
+            Object.keys(shelves).sort().forEach(shelf => {
+                html += `<div style="background:#f7fafc;border-radius:10px;padding:15px;margin-bottom:15px">`;
+                html += `<h5 style="margin-bottom:10px;color:#e74c3c">📍 Raf ${shelf}</h5>`;
+                shelves[shelf].forEach(m => {
+                    const cat = categories[m.category];
+                    const expiryClass = getExpiryClass(m.expiry, m.alarmDays);
+                    html += `
+                        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border-radius:8px;margin-bottom:8px;cursor:pointer;border-left:4px solid ${cat.color}" onclick="showMedicineDetail(${m.id})">
+                            <div style="font-size:1.5em">${cat.icon}</div>
+                            <div style="flex:1">
+                                <div style="font-weight:600">${m.name}</div>
+                                <div style="font-size:0.8em;color:#718096">${m.dose || 'Doz yok'}</div>
+                                <div style="font-size:0.75em;margin-top:3px;padding:2px 6px;border-radius:6px;display:inline-block" class="${expiryClass}">📅 ${formatDate(m.expiry)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // SKT Uyarıları
+        function renderExpiryList() {
+            const list = document.getElementById('expiryList');
+            const now = new Date();
+            const warnings = [];
+            
+            medicines.forEach(m => {
+                if(!m.expiry) return;
+                const expiry = new Date(m.expiry);
+                const alarmDate = new Date(expiry);
+                alarmDate.setDate(alarmDate.getDate() - (m.alarmDays || 7));
+                
+                const diff = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+                
+                if(diff < 0) warnings.push({...m, status:'expired', days:diff});
+                else if(diff <= (m.alarmDays || 7)) warnings.push({...m, status:'warning', days:diff});
+            });
+            
+            if(warnings.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <div class="empty-text">Tüm ilaçlar güvende!</div>
+                        <p style="font-size:0.9em;margin-top:10px">Son kullanma tarihi yaklaşan ilaç yok.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            warnings.sort((a,b) => a.days - b.days);
+            
+            list.innerHTML = warnings.map(m => {
+                const cat = categories[m.category];
+                const isExpired = m.status === 'expired';
+                return `
+                    <div style="background:${isExpired ? '#fed7d7' : '#fefcbf'};border-radius:12px;padding:15px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showMedicineDetail(${m.id})">
+                        <div style="font-size:2em">${isExpired ? '❌' : '⚠️'}</div>
+                        <div style="flex:1">
+                            <div style="font-weight:700;color:${isExpired ? '#742a2a' : '#744210'}">${cat.icon} ${m.name}</div>
+                            <div style="font-size:0.85em;margin-top:3px">
+                                ${isExpired ? `⏰ ${Math.abs(m.days)} gün önce doldu!` : `⏰ ${m.days} gün kaldı`}
+                            </div>
+                            <div style="font-size:0.8em;color:#718096;margin-top:3px">
+                                📍 ${locations[m.location].name}${m.shelf ? ' - Raf ' + m.shelf : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // İlaç detay
+        function showMedicineDetail(id) {
+            const medicine = medicines.find(m => m.id === id);
+            if(!medicine) return;
+            
+            selectedMedicineId = id;
+            const cat = categories[medicine.category];
+            const loc = locations[medicine.location];
+            
+            document.getElementById('modalMedicineName').textContent = medicine.name;
+            document.getElementById('modalImage').innerHTML = medicine.photo ? 
+                `<img src="${medicine.photo}">` : '<div style="color:#ccc;font-size:3em">💊</div>';
+            document.getElementById('modalIngredient').textContent = medicine.ingredient || 'Belirtilmemiş';
+            document.getElementById('modalCategory').textContent = `${cat.icon} ${cat.name}`;
+            document.getElementById('modalDose').textContent = `${medicine.dose || 'Belirtilmemiş'} - Günde ${medicine.dailyDose} kez (${medicine.usageType})`;
+            document.getElementById('modalLocation').textContent = `${loc.icon} ${loc.name}${medicine.shelf ? ' - Raf ' + medicine.shelf : ''}`;
+            document.getElementById('modalExpiry').textContent = formatDate(medicine.expiry);
+            
+            // Uyarı kontrolü
+            const now = new Date();
+            const expiry = new Date(medicine.expiry);
+            const diff = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+            const alertDiv = document.getElementById('modalAlert');
+            
+            if(diff < 0) {
+                alertDiv.textContent = '⚠️ BU İLACIN SON KULLANMA TARİHİ GEÇMİŞ! KULLANMAYIN!';
+                alertDiv.style.display = 'block';
+            } else if(diff <= (medicine.alarmDays || 7)) {
+                alertDiv.textContent = `⚠️ Dikkat: ${diff} gün içinde son kullanma tarihi dolacak!`;
+                alertDiv.style.display = 'block';
+            } else {
+                alertDiv.style.display = 'none';
+            }
+            
+            // Notlar
+            if(medicine.notes) {
+                document.getElementById('modalNotes').textContent = medicine.notes;
+                document.getElementById('modalNotesSection').style.display = 'block';
+            } else {
+                document.getElementById('modalNotesSection').style.display = 'none';
+            }
+            
+            document.getElementById('medicineModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('medicineModal').classList.remove('active');
+            selectedMedicineId = null;
+        }
+        
+        function deleteMedicine(id) {
+            if(confirm('Bu ilacı silmek istediğinize emin misiniz?')) {
+                medicines = medicines.filter(m => m.id !== id);
+                localStorage.setItem('evimdeIlac', JSON.stringify(medicines));
+                renderMedicineList();
+                updateStats();
+                showNotification('İlaç silindi 🗑️');
+            }
+        }
+        
+        function deleteCurrentMedicine() {
+            if(selectedMedicineId) {
+                deleteMedicine(selectedMedicineId);
+                closeModal();
+            }
+        }
+        
+        // Yardımcı fonksiyonlar
+        function getExpiryClass(expiry, alarmDays = 7) {
+            if(!expiry) return '';
+            const now = new Date();
+            const exp = new Date(expiry);
+            const diff = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+            
+            if(diff < 0) return 'expiry-danger';
+            if(diff <= alarmDays) return 'expiry-warning';
+            return 'expiry-good';
+        }
+        
+        function formatDate(dateStr) {
+            if(!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('tr-TR');
+        }
+        
+        function updateStats() {
+            document.getElementById('totalMedicines').textContent = `💊 ${medicines.length} İlaç`;
+            
+            const now = new Date();
+            const warnings = medicines.filter(m => {
+                if(!m.expiry) return false;
+                const exp = new Date(m.expiry);
+                const alarmDate = new Date(exp);
+                alarmDate.setDate(alarmDate.getDate() - (m.alarmDays || 7));
+                return now >= alarmDate;
+            }).length;
+            
+            document.getElementById('expiryAlert').textContent = `⚠️ ${warnings} Uyarı`;
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.className = 'notification show ' + type;
+            setTimeout(() => notif.classList.remove('show'), 3000);
+        }
+        
+        // Başlangıç
+        updateStats();
+    </script>
+</body>
+</html>'''
+
+# Kaydet
+with open('/mnt/kimi/output/evimde_ilac.html', 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print("✅ EVİMDE İLAÇ uygulaması hazır!")
+print("\n📱 Özellikler:")
+print("✅ Fotoğraf çekme (kamera + galeri)")
+print("✅ 10 kategori (Ağrı kesici, antibiyotik, vitamin, vs.)")
+print("✅ Etken madde takibi")
+print("✅ Doz ve kullanım bilgisi")
+print("✅ Konum belirleme (Banyo, mutfak, yatak odası, sağlık çantası)")
+print("✅ Son kullanma tarihi uyarıları (7/15/30 gün önce)")
+print("✅ Acil durum butonu (112, 184, 191)")
+print("✅ Doktor notu / yan etkiler ekleme")
+print("✅ Telefonda kaydetme (internetsiz)")
+print("\n📥 İndir: [evimde_ilac.html](sandbox:///mnt/kimi/output/evimde_ilac.html)")
